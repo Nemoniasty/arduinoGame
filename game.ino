@@ -32,12 +32,10 @@ public:
                 y1 + h1 <= y2 + h2);
         }
     }
-    void addColliders(Shape* obj[]) {
-        for (int i = 0; i < (   sizeof(objectsToColide) / sizeof(objectsToColide[0])    ); i++) {
-            if (objectsToColide[i] == nullptr) {
-                objectsToColide[i] = obj[i];
-                return;
-            }
+    template<int N>
+    void addColliders(Shape* (&obj)[N]) {
+        for (int i = 0; i < N && i < 20; i++) {
+            objectsToColide[i] = obj[i];
         }
     }
     void invertCollisions(){invertedCollisions=!invertedCollisions;}
@@ -85,7 +83,7 @@ public:
     // virtual void draw() = 0; // pure virtual → makes this class abstract
     // virtual void draw(int mode) = 0; // pure virtual → makes this class abstract
     virtual ~Shape() {
-        for(int i=0;i<20;i++) objectsToColide[i] = nullptr;
+        for(int i=0;i<20;i++) objectsToColide[i] = 0;
     }       // always provide a virtual destructor
 };
 
@@ -147,7 +145,7 @@ class Asci: public Shape{
         }
 };
 
-const char* objectLetters[] = {
+char* objectLetters[] = {
     ">|}",  //starship fast
     "I|>",  //staarship slow
     "=|>",  
@@ -157,8 +155,8 @@ const char* objectLetters[] = {
 
 unsigned long previousTime = 0;
 // Rect cube1(10,10,5,5,0,SSD1306_INVERSE);
-Rect border(0,0,64,128,0,SSD1306_INVERSE);
-Asci ship(10,32,objectLetters[4],0,SSD1306_WHITE);
+Rect border(0,0,128,64,0,SSD1306_INVERSE);
+Asci ship(10,24,objectLetters[0],0,SSD1306_WHITE);
 
 void drawOnScreen(){
     // border.draw(0);
@@ -169,6 +167,7 @@ void setupColliders(){
     border.invertCollisions();
     Shape* shapes[1]{&border};
     // cube1.addColliders(shapes);
+    // ship.addColliders(shapes);
     ship.addColliders(shapes);
 }
 
@@ -182,7 +181,7 @@ void setup() {
             for (;;);
         }
     display.setTextColor(SSD1306_WHITE);//SSD1306_INVERSE
-    display.setTextSize(1);
+    display.setTextSize(2);
 
     previousTime = millis();
 
@@ -212,7 +211,7 @@ void loop() {
 
     display.clearDisplay();
 
-    display.setRotation(1);
+    // display.setRotation(1);
 
     // if(!cube1.canMove(xSpeed*dirX, 0, dt)) dirX=-dirX;
     // if(!cube1.canMove(0, ySpeed*dirY, dt)) dirY=-dirY;
@@ -231,10 +230,10 @@ void loop() {
         
         switch (input) {
             case 'a': 
-                ship.move(0, -50, dt); break;
+                ship.move(0, -60, dt);
                 break;
             case 'd':
-                ship.move(0, 50, dt); break;
+                ship.move(0, 60, dt);
                 break;
         }
         
