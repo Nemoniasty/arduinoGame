@@ -6,6 +6,11 @@
 #define SCREEN_HEIGHT 64
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
+// bool DEBUG=false;
+class CollisionShape;
+class Vector2;
+class Layer;
+
 class Vector2{
     public:
         float x;
@@ -17,113 +22,179 @@ class Vector2{
         }
 };
 
+class Layer{
+    public:
+        int number;
+        const char* alias;
+        int numberOfMembers;
+        CollisionShape* members[10] = {};
+
+        Layer() : number(0), alias(nullptr), numberOfMembers(0) {}
+
+        Layer(int number_, const char* alias_, int numberOfMembers_){
+            memset(members, 0, sizeof(members));
+            number = number_;
+            alias = alias_;
+            numberOfMembers = numberOfMembers_;
+        }
+
+        void addCollision(CollisionShape* collision){
+            int i=0;
+            for(CollisionShape* member : members){
+                if(member==nullptr){
+                    members[i]=collision;
+                    return;
+                }
+                i++;
+            }
+        }
+};
+
 class Shape {
 public:
     Vector2 position;
-    int w;
-    int h;
-    int layer;
+    int w, h;
     uint16_t color;
-    bool invertedCollisions=false;
-    // Shape* objectsToColide[20];
-
-    // bool checkCollision(float x1, float y1, int w1, int h1,
-    //                     float x2, float y2, int w2, int h2,
-    //                     bool invertedCollisions) {
-    //     if(!invertedCollisions){
-    //        return !(x1 + w1 < x2 ||   // left of r2
-    //             x1 > x2 + w2 ||   // right of r2
-    //             y1 + h1 < y2 ||   // above r2
-    //             y1 > y2 + h2);    // below r2 
-    //     }else{
-    //         return (x1 >= x2 &&
-    //             y1 >= y2 &&
-    //             x1 + w1 <= x2 + w2 &&
-    //             y1 + h1 <= y2 + h2);
-    //     }
-    // }
-    // template<int N>
-    // void addColliders(Shape* (&obj)[N]) {
-    //     for (int i = 0; i < N && i < 20; i++) {
-    //         objectsToColide[i] = obj[i];
-    //     }
-    // }
-    // void invertCollisions(){invertedCollisions=!invertedCollisions;}
-    // bool checkCollisions(float x,float y,int w,int h, int layerInput){
-    //     // Serial.println("Checking collisions for: ");
-    //     for (Shape* object : objectsToColide){
-    //         if(object!=nullptr){
-    //             // Serial.print("{");
-    //             // Serial.print(object->w);
-    //             // Serial.print(",");
-    //             // Serial.print(object->h);
-    //             // Serial.print("} - ");
-    //             if (!checkCollision(x, y, w, h,
-    //             object->x, object->y, object->w, object->h, object->invertedCollisions)&&object->layer==layerInput){
-    //                 // Serial.println("false");
-    //                 return false;
-    //                 break;
-    //             } 
-    //         }
-    //     }
-    //     // Serial.println("true");
-    //     return true;
-    // }
-
-    // bool canMove(float xInput, float yInput, float dt) {
-    //     xInput *= dt;
-    //     yInput *= dt;
-    //     if (checkCollisions(x + xInput, y + yInput, w, h,layer)) {
-    //         return true;
-    //     }
-    //     return false;
-    // }
-
-    // bool move(float xInput, float yInput, float dt) {
-    //     xInput *= dt;
-    //     yInput *= dt;
-    //     if (checkCollisions(x + xInput, y + yInput, w, h,layer)) {
-    //         x += xInput;
-    //         y += yInput;
-    //         return true;
-    //     }
-    //     return false;
-    // }
-    
-    // // virtual void draw() = 0; // pure virtual → makes this class abstract
-    // // virtual void draw(int mode) = 0; // pure virtual → makes this class abstract
-    // virtual ~Shape() {
-    //     for(int i=0;i<20;i++) objectsToColide[i] = 0;
-    // }       // always provide a virtual destructor
+    // bool invertedCollisions=false;
+    virtual ~Shape() {}
+    bool drawable;
+    virtual void draw()=0;
 };
 
 class CollisionShape: public Shape{
     public:
-        CollisionShape(float x_, float y_){
-            position.x = x_;
-            position.y = y_;
+        bool drawable=false;
+        Layer* objectLayers[5];
+        Layer* accesLayers[5];
+
+        Vector2 offset;
+
+        template<int O, int A>
+        CollisionShape(Layer* (&objectLayers_)[O], Layer* (&accesLayers_)[A]){
+            memset(objectLayers, 0, sizeof(objectLayers));
+            memset(accesLayers, 0, sizeof(accesLayers));
+
+            for (int i = 0; i < O && i < 5; i++) {
+                objectLayers[i] = objectLayers_[i];
+            }
+            for (int i = 0; i < A && i < 5; i++) {
+                accesLayers[i] = accesLayers_[i];
+            }
+        }
+        template<int O, int A>
+        CollisionShape(float oX_, float oY_, int w_, int h_, Layer* (&objectLayers_)[O], Layer* (&accesLayers_)[A]){
+            memset(objectLayers, 0, sizeof(objectLayers));
+            memset(accesLayers, 0, sizeof(accesLayers));
+
+            offset.x = oX_;
+            offset.y = oY_;
+            w = w_;
+            h = h_;
+            for (int i = 0; i < O && i < 5; i++) {
+                objectLayers[i] = objectLayers_[i];
+            }
+            for (int i = 0; i < A && i < 5; i++) {
+                accesLayers[i] = accesLayers_[i];
+            }
+        }
+        void draw(){
+            drawable = !drawable;
+            if(drawable){
+                display.drawRect(position.x, position.y, w, h, SSD1306_WHITE);
+            }
+        }
+
+        bool checkCollision(float x1, float y1, int w1, int h1,
+                float x2, float y2, int w2, int h2
+                ) {
+            if(true){
+                return !(x1 + w1 < x2 ||   // left of r2
+                        x1 > x2 + w2 ||   // right of r2
+                        y1 + h1 < y2 ||   // above r2
+                        y1 > y2 + h2);    // below r2 
+            }else{
+                return (x1 >= x2 &&
+                        y1 >= y2 &&
+                        x1 + w1 <= x2 + w2 &&
+                        y1 + h1 <= y2 + h2);
+            }
         }
 };
 
-// class Rect: public Shape{
-//     public:
-//         // Shape* objectsToColide[3] = {nullptr, nullptr, nullptr};
+class RectShape: public Shape{
+    public:
+        bool drawable=true;
+        char* name;
 
-//         Rect(float x_, float y_, int w_, int h_,int layer_, uint16_t color_) {
-//             x = x_;
-//             y = y_;
-//             w = w_;
-//             h = h_;
-//             layer=layer_;
-//             color = color_;
-//         }
-//         void draw(int mode){
-//             if(mode==1)
-//             display.fillRect((int)x,(int)y,w,h,color);
-//             else
-//             display.drawRect((int)x,(int)y,w,h,color);
-//         }
-// };
+        CollisionShape* collisions[5]={};
+        CollisionShape* coliding[5]={};
+        template<int C>
+        RectShape(char* name_, float x_, float y_, int w_, int h_, CollisionShape* (&collisions_)[C]){
+            memset(collisions, 0, sizeof(collisions));
+            memset(coliding, 0, sizeof(coliding));
+
+            name=name_;
+            position.x = x_;
+            position.y = y_;
+            w = w_;
+            h = h_;
+            for (int i = 0; i < C && i < 5; i++) {
+                collisions[i] = collisions_[i];
+                CollisionShape* collision = collisions_[i];
+                for(Layer* layer : collision->objectLayers){
+                    if(layer == nullptr) break; // ✓
+                    layer->addCollision(collision);
+                }
+            }
+        }
+        void draw(){
+            if(drawable){
+                display.drawRect(position.x, position.y, w, h, SSD1306_WHITE);
+            }
+        }
+        void attachCollisions(){
+            for(CollisionShape* coll : collisions){
+                if(coll == nullptr) break;
+                coll->position.x = position.x + coll->offset.x;
+                coll->position.y = position.y + coll->offset.y;
+            }
+        }
+        void checkCollisions(){
+            for(CollisionShape* coll : collisions){
+                if(coll == nullptr) break;
+                // coll->checkLayer(Layer *layer)
+                for(Layer* accesLayer : coll->accesLayers){
+                    if(accesLayer == nullptr) break;
+                    int i=0;
+                    for(CollisionShape* collAcces : accesLayer->members){
+                        if(collAcces == nullptr) break;
+                        if(collAcces == coll) continue; // ✓ skip self
+                        bool collisionOutput = coll->checkCollision(coll->position.x, coll->position.y, coll->w, coll->h,
+                                collAcces->position.x, collAcces->position.y, collAcces->w, collAcces->h);
+                        if(collisionOutput){
+                            coliding[i]=collAcces;
+                            Serial.print(name);
+                            Serial.print(F(" coliding with "));
+                            Serial.println((int)collAcces);
+                        }
+                        i++;
+                    }
+                }
+            }
+        }
+        bool move(float xInput, float yInput, float dt) {
+            xInput *= dt;
+            yInput *= dt;
+            checkCollisions();
+            if (coliding) {
+                position.x += xInput;
+                position.y += yInput;
+                attachCollisions();
+                return true;
+            }
+            return false;
+        }
+};
 
 // class Asci: public Shape{
 //     char letters[4];
@@ -171,30 +242,41 @@ char* objectLetters[] = {
 };
 
 unsigned long previousTime = 0;
-// Rect cube1(10,10,5,5,0,SSD1306_INVERSE);
-// Rect border(0,0,128,64,0,SSD1306_INVERSE);
-// Asci ship(10,24,objectLetters[0],0,SSD1306_WHITE);
 
 void drawOnScreen(){
-    // border.draw(0);
-    // cube1.draw(1);
-    // ship.draw();
 }
-void setupColliders(){
-    // border.invertCollisions();
-    // Shape* shapes[1]{&border};
-    // cube1.addColliders(shapes);
-    // ship.addColliders(shapes);
-    // ship.addColliders(shapes);
+
+// Layers
+    Layer phisics(1,"phisics",0);
+    // Layer enemy(2,"enemy",0);
+
+    Layer* phisicsLayerPreset[1]{&phisics}; // only phisics
+    Layer* noLayerPreset[1]; // no layer
+
+CollisionShape col1R1(0,0,20,20,phisicsLayerPreset,phisicsLayerPreset);
+CollisionShape* r1Colls[1]{&col1R1};
+
+CollisionShape col1R2(0,0,13,18,phisicsLayerPreset,noLayerPreset);
+CollisionShape* r2Colls[1]{&col1R2};
+
+RectShape r1("big",5,5,20,20,r1Colls);
+RectShape r2("small",8,15,13,18,r2Colls);
+//adding r1.collisionsList[j].col1ObjectLayers[i] to its layers 
+
+void setupCollisions(){
+    // col1R1.drawable=true;
+    // col1R2.drawable=true;
+    r1.attachCollisions();
+    r2.attachCollisions();
 }
 
 void setup() {
     Wire.begin();
-    // Wire.setClock(100000);
     randomSeed(analogRead(A0));
     Serial.begin(115200);
+    Serial.println(freeMemory());
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-            Serial.println("OLED not found");
+            Serial.println(F("OLED not found"));
             for (;;);
         }
     display.setTextColor(SSD1306_WHITE);//SSD1306_INVERSE
@@ -202,7 +284,7 @@ void setup() {
 
     previousTime = millis();
 
-    setupColliders();
+    setupCollisions();
 }
 extern int __heap_start, *__brkval;
 
@@ -212,51 +294,28 @@ int freeMemory() {
 }
 
 
-// int dirX=1;
-// int dirY=1;
-// int xSpeed = random(2) ? random(10,30) : random(-30,-10);
-// int ySpeed = random(2) ? random(10,30) : random(-30,-10);
-
 unsigned long debugTimer = 0;
-// bool moveLeft = false;
-// bool moveRight = false;
 
 void loop() {
+    Serial.print(F("Memory: "));
+    Serial.print(2000-freeMemory());
+    Serial.println(F("/2000 bytes"));
     unsigned long now = millis();
     float dt = (now - previousTime) / 1000.0f;
     previousTime = now;
 
     display.clearDisplay();
 
-    // display.setRotation(1);
+    r1.draw();
+    // col1R1.draw();
+    r1.checkCollisions();
 
-    // if(!cube1.canMove(xSpeed*dirX, 0, dt)) dirX=-dirX;
-    // if(!cube1.canMove(0, ySpeed*dirY, dt)) dirY=-dirY;
-
-    // cube1.move(xSpeed*dirX, ySpeed*dirY, dt);
-
-    // if(now - debugTimer > 200){
-    //     Serial.println((int)freeMemory());
-    //     debugTimer = now;
-    // }
-
-    // char input;
-    // if (Serial.available() > 0) {
-    //     input = Serial.read();
-    //     Serial.println(input);
-        
-    //     switch (input) {
-    //         case 'a': 
-    //             ship.move(0, -60, dt);
-    //             break;
-    //         case 'd':
-    //             ship.move(0, 60, dt);
-    //             break;
-    //     }
-        
-
-    // }
+    r2.draw();
+    // col1R2.draw();
+    r2.checkCollisions();
 
     drawOnScreen();
     display.display();
+
+    delay(100);
 }
