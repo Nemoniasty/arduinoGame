@@ -5,8 +5,18 @@ import time
 ser = serial.Serial('/dev/ttyACM0', 115200)
 
 while True:
-    if keyboard.is_pressed('a'):
+    a = keyboard.is_pressed('a')
+    d = keyboard.is_pressed('d')
+
+    if a and not d:
         ser.write(b'a')
-    if keyboard.is_pressed('d'):
+    elif d and not a:
         ser.write(b'd')
-    time.sleep(0.08)  # 50ms delay to avoid flooding the serial buffer
+
+    if keyboard.is_pressed('I') and keyboard.is_pressed('shift'):
+        ser.write(b'I')
+
+    if keyboard.is_pressed('space'):
+        ser.write(b' ')
+
+    time.sleep(0.02)
