@@ -373,34 +373,18 @@ void loop() {
     display.clearDisplay();
 
     char input;
-    if (Serial.available() > 0) {
-        char input = 0;
-        while (Serial.available() > 0) {
-            input = Serial.read();  // drain all, keep only the last one
-        }
-        Serial.println(input);
-        
+    while (Serial.available() > 0) {
+        char input = Serial.read();
         switch (input) {
-            // case 's': 
-            //     spaceship.move(-50, 0, dt);    break;
-            // case 'w':
-            //     spaceship.move(50, 0, dt);     break;
-            case 'a': 
-                spaceship.move(0, -50, dt);    break;
-            case 'd':
-                spaceship.move(0, 50, dt);     break;
+            case 's': spaceship.move(-50, 0, dt); break;
+            case 'w': spaceship.move(50, 0, dt);  break;
+            case 'a': spaceship.move(0, -50, dt); break;
+            case 'd': spaceship.move(0, 50, dt);  break;
             case ' ':
                 if (millis() - lastShotTime > shootCooldown) {
                     spaceship.shoot();
                     lastShotTime = millis();
                 }
-                break;
-            case 'I':
-                // Serial.print(F("Memory: "));
-                // Serial.print(2000-freeMemory());
-                // Serial.println(F("/2000 bytes"));
-                Serial.print(F("FPS: "));
-                Serial.println(1.0f/dt);
                 break;
         }
     }
